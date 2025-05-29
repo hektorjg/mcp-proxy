@@ -8,6 +8,14 @@
 
 - [mcp-proxy](#mcp-proxy)
   - [About](#about)
+  - [Authentication](#authentication)
+    - [Configuration](#configuration)
+    - [Token Generation](#token-generation)
+    - [Usage](#usage)
+    - [Protected Endpoints](#protected-endpoints)
+    - [Public Endpoints](#public-endpoints)
+    - [Error Codes](#error-codes)
+    - [Authentication Examples](#authentication-examples)
   - [1. stdio to SSE/StreamableHTTP](#1-stdio-to-ssestreamablehttp)
     - [1.1 Configuration](#11-configuration)
     - [1.2 Example usage](#12-example-usage)
@@ -34,6 +42,124 @@ The `mcp-proxy` is a tool that lets you switch between server transports. There 
 1. stdio to SSE/StreamableHTTP
 2. SSE to stdio
 
+## Authentication
+
+The `mcp-proxy` supports optional token-based authentication to protect all endpoints (except `/status`).
+
+### Configuration
+
+To enable authentication, set the `MCP_PROXY_AUTH_TOKEN` environment variable:
+
+```bash
+export MCP_PROXY_AUTH_TOKEN="your_secret_token_here"
+```
+
+Or create a `.env` file in the project root:
+
+```env
+MCP_PROXY_AUTH_TOKEN=your_secret_token_here
+```
+
+### Token Generation
+
+For security, we recommend generating a random token:
+
+```bash
+# Using openssl
+openssl rand -base64 32
+
+# Using python
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Using uuidgen
+uuidgen
+```
+
+### Usage
+
+**Without Authentication:**
+If `MCP_PROXY_AUTH_TOKEN` is not set, the server works without authentication (default behavior).
+
+**With Authentication:**
+When enabled, all requests (except `/status`) must include the Authorization header:
+
+```bash
+curl -H "Authorization: Bearer your_secret_token_here" http://localhost:8080/sse
+```
+
+### Protected Endpoints
+
+The following endpoints require authentication when enabled:
+- `/sse` - Default SSE server
+- `/mcp` - Default MCP HTTP endpoint  
+- `/servers/{name}/sse` - Named SSE servers
+- `/servers/{name}/mcp` - Named MCP HTTP endpoints
+- `/messages/` - SSE messages
+
+### Public Endpoints
+
+The following endpoints are always accessible without authentication:
+- `/status` - Server status
+
+### Error Codes
+
+- **401 Unauthorized**: Missing authorization header or incorrect format
+- **403 Forbidden**: Invalid token
+
+### Authentication Examples
+
+**Python SSE Client:**
+```python
+import requests
+
+headers = {
+    "Authorization": "Bearer your_secret_token_here",
+    "Accept": "text/event-stream"
+}
+
+response = requests.get("http://localhost:8080/sse", headers=headers, stream=True)
+```
+
+**Python MCP HTTP Client:**
+```python
+import requests
+
+headers = {
+    "Authorization": "Bearer your_secret_token_here",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {}
+}
+
+response = requests.post("http://localhost:8080/mcp", json=data, headers=headers)
+```
+
+**Curl with Environment Variable:**
+```bash
+export TOKEN="your_secret_token_here"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/sse
+```
+
+**MCP Client Configuration:**
+```json
+{
+  "mcpServers": {
+    "proxy": {
+      "command": "mcp-proxy",
+      "args": ["http://localhost:8080/sse"],
+      "headers": {
+        "Authorization": "Bearer your_secret_token_here"
+      }
+    }
+  }
+}
+```
+
 ## 1. stdio to SSE/StreamableHTTP
 
 Run a proxy server from stdio that connects to a remote SSE server.
@@ -53,7 +179,7 @@ graph LR
 
 ### 1.1 Configuration
 
-This mode requires providing the URL of the MCP Server's SSE endpoint as the program’s first argument. If the server uses Streamable HTTP transport, make sure to enforce it on the `mcp-proxy` side by passing `--transport=streamablehttp`.
+This mode requires providing the URL of the MCP Server's SSE endpoint as the program's first argument. If the server uses Streamable HTTP transport, make sure to enforce it on the `mcp-proxy` side by passing `--transport=streamablehttp`.
 
 Arguments
 

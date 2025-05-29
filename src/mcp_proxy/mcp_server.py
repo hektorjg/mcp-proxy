@@ -21,6 +21,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import BaseRoute, Mount, Route
 from starlette.types import Receive, Scope, Send
 
+from .auth_middleware import TokenAuthMiddleware
 from .proxy_server import create_proxy_server
 
 logger = logging.getLogger(__name__)
@@ -168,6 +169,10 @@ async def run_mcp_server(
             return
 
         middleware: list[Middleware] = []
+        
+        # Add authentication middleware first
+        middleware.append(Middleware(TokenAuthMiddleware))
+        
         if mcp_settings.allow_origins:
             middleware.append(
                 Middleware(

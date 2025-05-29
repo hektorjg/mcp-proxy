@@ -25,9 +25,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Final stage with explicit platform specification
 FROM python:3.12-alpine
 
+# Install Node.js and npm
+RUN apk add --no-cache nodejs npm
+
 COPY --from=uv --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-ENTRYPOINT ["mcp-proxy"]
+ENTRYPOINT ["uv","run","mcp-proxy"]

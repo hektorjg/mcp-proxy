@@ -83,10 +83,19 @@ def load_named_server_configs_from_file(
             )
             continue
 
+        env = server_config.get("env", {})
+        if not isinstance(env, dict):
+            logger.warning(
+                "Named server '%s' from config has invalid 'env' (must be a dictionary). Skipping.",
+                name,
+            )
+            continue
+        env = {**base_env.copy(), **env}
+
         named_stdio_params[name] = StdioServerParameters(
             command=command,
             args=command_args,
-            env=base_env.copy(),
+            env=env,
             cwd=None,
         )
         logger.info(
