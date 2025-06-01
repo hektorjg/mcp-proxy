@@ -9,6 +9,8 @@ import typing as t
 from mcp import server, types
 from mcp.client.session import ClientSession
 
+from mcp_proxy.non_error_server import NonErrorServer
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +21,8 @@ async def create_proxy_server(remote_app: ClientSession) -> server.Server[object
     capabilities = response.capabilities
 
     logger.debug("Configuring proxied MCP server...")
-    app: server.Server[object] = server.Server(name=response.serverInfo.name)
+    # app: server.Server[object] = server.Server(name=response.serverInfo.name)
+    app: server.Server[object] = NonErrorServer(name=response.serverInfo.name)
 
     if capabilities.prompts:
         logger.debug("Capabilities: adding Prompts...")
